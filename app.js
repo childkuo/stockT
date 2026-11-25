@@ -4,6 +4,15 @@ import {
   renderChipsFlowChart,
   renderFuturesMarginChart
 } from "./charts.js";
+import {
+  getIndices,
+  getSummary,
+  getChips,
+  searchTickers,
+  getStockPayload,
+  addCustomOpinion,
+  deleteCustomOpinion
+} from "./dataClient.js";
 
 const state = {
   symbol: "2330.TW",
@@ -74,19 +83,12 @@ function showToast(msg) {
   showToast._t = setTimeout(() => el.classList.remove("show"), 3000);
 }
 
-async function apiJson(url, opts = {}) {
-  const res = await fetch(url, opts);
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
-  return data;
-}
-
 /* ==========================================================================
    Global Indices Ticker Strip
    ========================================================================== */
 async function loadIndices(force = false) {
   try {
-    const data = await apiJson(`/api/indices${force ? "?refresh=1" : ""}`);
+    const data = await getIndices(force);
     state.indicesData = data.items || [];
     renderIndices();
   } catch (err) {
@@ -116,14 +118,14 @@ function renderIndices() {
    Individual Stock + Committee Decision Loader
    ========================================================================== */
 async function loadStock(symbol, force = false) {
-  const target = (symbol || "2330.TW").trim();
+  const target = (symbol || "00631L.TW").trim();
   state.symbol = target;
   window.history.replaceState(null, "", `#${encodeURIComponent(target)}`);
   updateWatchlistActive(target);
 
   $("leader-verdict").textContent = `正在即時擷取 ${target} 歷史行情與多角色分析...`;
   try {
-    const payload = await apiJson(`/api/stock/${encodeURIComponent(target)}${force ? "?refresh=1" : ""}`);
+    const payload = await getStockPayload(target, force);
     state.stockPayload = payload;
     state.symbol = payload.stock.symbol;
     updateWatchlistActive(payload.stock.symbol);
@@ -407,10 +409,7 @@ function renderRoles(decision) {
     btn.addEventListener("click", async () => {
       const id = btn.dataset.deleteOpinion;
       try {
-        const res = await apiJson(
-          `/api/committee/${encodeURIComponent(state.symbol)}/opinion/${encodeURIComponent(id)}`,
-          { method: "DELETE" }
-        );
+        const res = await deleteCustomOpinion(state.symbol, id);
         state.stockPayload.decision = res.decision;
         renderDecision(res.decision, state.stockPayload.stock);
         renderRoles(res.decision);
@@ -459,7 +458,7 @@ function renderPeers(peers) {
    ========================================================================== */
 async function loadChips(force = false) {
   try {
-    const data = await apiJson(`/api/chips?days=180${force ? "&refresh=1" : ""}`);
+    const data = await getChips(180, force);
     state.chipsData = data.history || [];
     renderChipsView();
   } catch (err) {
@@ -533,7 +532,7 @@ function renderChipsView() {
    ========================================================================== */
 async function loadSummary(force = false) {
   try {
-    state.summaryData = await apiJson(`/api/summary${force ? "?refresh=1" : ""}`);
+    state.summaryData = await getSummary(force);
     if (state.summaryData.latestTradingDate) {
       $("latest-date-label").textContent = state.summaryData.latestTradingDate;
     }
@@ -718,7 +717,7 @@ function attachTickerSearch({ formEl, inputEl, dropdownEl, containerEl }) {
 
   async function queryTickers(q) {
     try {
-      const res = await apiJson(`/api/tickers?q=${encodeURIComponent(q)}&limit=12`);
+      const res = await searchTickers(q, 12);
       results = res.items || [];
       activeIdx = results.length ? 0 : -1;
       renderDropdown();
@@ -975,11 +974,7 @@ function initEvents() {
     if (!role || !summary) return;
 
     try {
-      const res = await apiJson(`/api/committee/${encodeURIComponent(state.symbol)}/opinion`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role, author, stance, score, summary })
-      });
+      const res = await addCustomOpinion(state.symbol, { role, author, stance, score, summary });
       state.stockPayload.decision = res.decision;
       renderDecision(res.decision, state.stockPayload.stock);
       renderRoles(res.decision);

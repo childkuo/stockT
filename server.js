@@ -11,7 +11,7 @@ const PORT = Number(process.env.PORT || 3000);
 const FUNSTX_BASE = "https://data.funstx.com/data";
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
-const PUBLIC_DIR = path.join(__dirname, "public");
+const PUBLIC_DIR = __dirname;
 const DATA_DIR = path.join(__dirname, "data");
 const CURATED_FILE = path.join(DATA_DIR, "committee_reports.json");
 const CUSTOM_FILE = path.join(DATA_DIR, "custom_opinions.json");
@@ -142,6 +142,16 @@ function readRequestBody(req) {
 
 function serveStatic(reqPath, res) {
   const cleanPath = reqPath === "/" ? "/index.html" : reqPath;
+  if (
+    cleanPath === "/server.js" ||
+    cleanPath === "/package.json" ||
+    cleanPath.startsWith("/scripts/") ||
+    cleanPath.startsWith("/.")
+  ) {
+    res.writeHead(403);
+    res.end("Forbidden");
+    return;
+  }
   const fullPath = path.normalize(path.join(PUBLIC_DIR, cleanPath));
   if (!fullPath.startsWith(PUBLIC_DIR)) {
     res.writeHead(403);

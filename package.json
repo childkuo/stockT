@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch server.js",
+    "sync": "node scripts/sync-market-data.mjs"
   },
   "engines": {
     "node": ">=20.0.0"
