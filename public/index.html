@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="zh-Hant" data-theme="dark" data-color-mode="tw">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StockT | 投資團隊多角色決策中心與即時數據 BI 儀表板</title>
+  <meta name="description" content="動態股票代號查詢與商業智慧 BI 儀表板，整合技術面、基本面、籌碼面與總經風控多角色分析，自動產出投資團隊班長綜合投資決策。" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <!-- Sticky Header & Live Stock Search Command Bar -->
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a href="#2330.TW" class="brand" id="brand-home">
+        <div class="brand-mark">ST</div>
+        <div class="brand-text">
+          <span class="brand-title">StockT 投資團隊 BI</span>
+          <span class="brand-sub">即時行情分析 · 多角色決策中心</span>
+        </div>
+      </a>
+
+      <div class="search-wrap" id="search-wrap">
+        <form class="search-input-box" id="topbar-search-form" autocomplete="off">
+          <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2" />
+            <path d="M20 20L16.65 16.65" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+          </svg>
+          <input
+            type="text"
+            id="stock-search-input"
+            class="search-input"
+            placeholder="輸入股票代號或名稱（如 2330、2317、0050、NVDA）"
+            autocomplete="off"
+          />
+          <span class="search-kbd">⌘K</span>
+          <button type="submit" class="btn btn-primary search-submit-btn" id="btn-topbar-query">查詢</button>
+        </form>
+        <div class="search-dropdown" id="search-dropdown" role="listbox" aria-label="股票搜尋建議"></div>
+      </div>
+
+      <div class="topbar-actions">
+        <div class="sync-meta" id="sync-status">
+          <span>資料基準日</span>
+          <strong class="mono" id="latest-date-label">--</strong>
+        </div>
+        <button type="button" class="btn" id="btn-refresh" title="強制重新同步最新市場行情">同步最新</button>
+        <button type="button" class="btn" id="btn-color-mode" title="切換台股／美股漲跌配色">紅漲綠跌</button>
+        <button type="button" class="btn" id="btn-theme" title="切換深色／淺色外觀">淺色模式</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Live Global Indices Ticker Strip -->
+  <section class="indices-strip" aria-label="全球重要大盤指數">
+    <div class="indices-inner" id="indices-strip-inner">
+      <div class="index-chip"><span class="text-muted">正在載入全球大盤指數...</span></div>
+    </div>
+  </section>
+
+  <!-- Navigation Tabs & Quick Watchlist -->
+  <nav class="subnav" aria-label="儀表板主分頁">
+    <div class="tabs" role="tablist">
+      <button type="button" class="tab-btn active" id="tab-btn-decision" data-tab="decision" role="tab" aria-selected="true">
+        班長決策 &amp; 個股 BI
+      </button>
+      <button type="button" class="tab-btn" id="tab-btn-chips" data-tab="chips" role="tab" aria-selected="false">
+        大盤籌碼資金 BI
+      </button>
+      <button type="button" class="tab-btn" id="tab-btn-market" data-tab="market" role="tab" aria-selected="false">
+        全市場熱力圖 &amp; 掃描
+      </button>
+    </div>
+
+    <div class="watchlist-bar" id="quick-watchlist">
+      <span class="watchlist-label">焦點標的</span>
+      <button type="button" class="watch-pill active" data-symbol="00631L.TW">00631L 元大台灣50正2</button>
+      <button type="button" class="watch-pill" data-symbol="2330.TW">2330 台積電</button>
+      <button type="button" class="watch-pill" data-symbol="0050.TW">0050 元大台灣50</button>
+      <button type="button" class="watch-pill" data-symbol="2454.TW">2454 聯發科</button>
+      <button type="button" class="watch-pill" data-symbol="NVDA">NVDA</button>
+      <button type="button" class="watch-pill" data-symbol="TSM">TSM ADR</button>
+    </div>
+  </nav>
+
+  <main class="container">
+    <!-- ==================== VIEW 1: DECISION & STOCK BI ==================== -->
+    <div class="view-panel active" id="view-decision">
+      <!-- Dedicated Direct Stock Code Query Bar -->
+      <section class="card ticker-query-card" aria-label="輸入股票代號快速查詢">
+        <div class="ticker-query-row">
+          <label for="direct-ticker-input" class="ticker-query-label">股票代號查詢</label>
+          <form class="ticker-query-form" id="direct-ticker-form" autocomplete="off">
+            <input
+              type="text"
+              id="direct-ticker-input"
+              class="ticker-query-input"
+              placeholder="輸入代號或名稱（如 2330、2317、6488、0050、NVDA、AAPL）"
+              autocomplete="off"
+            />
+            <button type="submit" class="btn btn-primary ticker-query-btn" id="btn-direct-query">查詢個股</button>
+            <div class="search-dropdown" id="direct-ticker-dropdown" role="listbox" aria-label="股票代號建議"></div>
+          </form>
+          <div class="ticker-recent-wrap" id="recent-queries-wrap" style="display:none;">
+            <span class="ticker-recent-label">最近查詢</span>
+            <div id="recent-queries" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Stock Hero & KPI Strip -->
+      <section class="card stock-hero" aria-label="個股即時報價與核心指標">
+        <div class="stock-identity">
+          <div>
+            <div class="stock-title-row">
+              <h1 id="stock-heading">2330 台積電</h1>
+              <span class="badge badge-neutral mono" id="stock-symbol-badge">2330.TW</span>
+              <span class="badge badge-accent" id="stock-category-badge">半導體業</span>
+              <span class="badge badge-neutral" id="stock-exchange-badge">TWSE</span>
+            </div>
+            <div class="stock-price-row" style="margin-top: 12px;">
+              <span class="stock-price mono" id="stock-price">--</span>
+              <span class="stock-change mono" id="stock-change">--</span>
+              <span class="text-muted mono" style="font-size:12px;" id="stock-currency">TWD</span>
+            </div>
+          </div>
+
+          <div class="range-52w">
+            <div class="range-52w-labels">
+              <span>52 週低點 <strong class="mono" id="low-52w">--</strong></span>
+              <span>目前位階 <strong class="mono text-accent" id="pos-52w">--</strong></span>
+              <span>52 週高點 <strong class="mono" id="high-52w">--</strong></span>
+            </div>
+            <div class="range-track">
+              <div class="range-fill" id="range-52w-fill" style="width: 50%;"></div>
+              <div class="range-dot" id="range-52w-dot" style="left: 50%;"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="kpi-grid" id="stock-kpi-grid">
+          <div class="kpi-cell"><span class="kpi-label">成交量 / 量比</span><span class="kpi-val mono" id="kpi-vol">--</span><span class="kpi-sub mono" id="kpi-volratio">--</span></div>
+          <div class="kpi-cell"><span class="kpi-label">本益比 (P/E)</span><span class="kpi-val mono" id="kpi-pe">--</span><span class="kpi-sub mono" id="kpi-pb">P/B --</span></div>
+          <div class="kpi-cell"><span class="kpi-label">殖利率 / 波動率</span><span class="kpi-val mono" id="kpi-dy">--</span><span class="kpi-sub mono" id="kpi-volann">年化波動 --</span></div>
+          <div class="kpi-cell"><span class="kpi-label">RSI(14) / KD(9)</span><span class="kpi-val mono" id="kpi-rsi">--</span><span class="kpi-sub mono" id="kpi-kd">K/D --</span></div>
+          <div class="kpi-cell"><span class="kpi-label">週線 MA5</span><span class="kpi-val mono" id="kpi-ma5">--</span><span class="kpi-sub mono" id="kpi-ma5-diff">--</span></div>
+          <div class="kpi-cell"><span class="kpi-label">月線 MA20</span><span class="kpi-val mono" id="kpi-ma20">--</span><span class="kpi-sub mono" id="kpi-ma20-diff">--</span></div>
+          <div class="kpi-cell"><span class="kpi-label">季線 MA60</span><span class="kpi-val mono" id="kpi-ma60">--</span><span class="kpi-sub mono" id="kpi-ma60-diff">--</span></div>
+          <div class="kpi-cell"><span class="kpi-label">年線 MA240</span><span class="kpi-val mono" id="kpi-ma240">--</span><span class="kpi-sub mono" id="kpi-ma240-diff">--</span></div>
+        </div>
+      </section>
+
+      <!-- Team Leader Final Investment Decision Banner -->
+      <section class="card leader-card" aria-label="投資團隊班長最終決策">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title" id="leader-headline">投資團隊班長・最終決策匯總</h2>
+            <p class="card-subtitle" id="leader-meta">整合技術面、基本面、籌碼面與總經風控角色評分</p>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <span class="badge badge-accent" id="decision-mode-badge">AI 分析師團隊深度報告</span>
+          </div>
+        </div>
+
+        <div class="leader-layout">
+          <div class="gauge-box">
+            <svg class="gauge-svg" viewBox="0 0 140 140" aria-label="綜合評分儀表">
+              <circle cx="70" cy="70" r="56" fill="none" stroke="var(--bg-elevated)" stroke-width="11" />
+              <circle
+                id="gauge-arc"
+                cx="70" cy="70" r="56"
+                fill="none"
+                stroke="var(--accent)"
+                stroke-width="11"
+                stroke-linecap="round"
+                stroke-dasharray="351.86"
+                stroke-dashoffset="175"
+                transform="rotate(-90 70 70)"
+                style="transition: stroke-dashoffset 0.5s ease;"
+              />
+              <text x="70" y="66" text-anchor="middle" fill="var(--text-primary)" font-family="JetBrains Mono, monospace" font-size="30" font-weight="800" id="gauge-score-text">--</text>
+              <text x="70" y="88" text-anchor="middle" fill="var(--text-muted)" font-size="11">班長加權評分</text>
+            </svg>
+            <span class="badge badge-warn" id="leader-stance-badge" style="font-size:12.5px;padding:4px 10px;">載入中...</span>
+          </div>
+
+          <div>
+            <p class="leader-verdict-text" id="leader-verdict">正在即時擷取最新行情並計算多角色投資決策...</p>
+            <ul class="action-list" id="leader-actions"></ul>
+            <div class="dissent-box" id="leader-dissent"></div>
+          </div>
+
+          <aside class="trade-plan-box" aria-label="紀律交易參數">
+            <h3 class="trade-plan-title">紀律執行參數 (Trade Plan)</h3>
+            <div class="trade-row"><span>建議單一倉位上限</span><span class="mono text-accent" id="tp-maxpos">--</span></div>
+            <div class="trade-row"><span>低檔觀察／分批區間</span><span class="mono" id="tp-entry">--</span></div>
+            <div class="trade-row"><span>防守硬停損線</span><span class="mono text-down" id="tp-stop">--</span></div>
+            <div class="trade-row"><span>短線首道壓力目標</span><span class="mono text-up" id="tp-t1">--</span></div>
+            <div class="trade-row"><span>波段第二壓力目標</span><span class="mono text-up" id="tp-t2">--</span></div>
+          </aside>
+        </div>
+      </section>
+
+      <!-- Main K-Line Chart & Side Analytics (Multi-Period Returns + DCA Simulator) -->
+      <div class="analytics-grid">
+        <section class="card" aria-label="互動式 K 線與技術指標圖表">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">互動式 K 線走勢與技術指標 BI</h2>
+              <p class="card-subtitle">滑鼠懸停檢視精確 OHLCV、均線與技術指標；虛線標示班長停損與目標位</p>
+            </div>
+            <div class="chart-controls">
+              <div class="seg-group" id="range-selector">
+                <button type="button" class="seg-btn" data-days="30">1M</button>
+                <button type="button" class="seg-btn" data-days="60">3M</button>
+                <button type="button" class="seg-btn active" data-days="120">6M</button>
+                <button type="button" class="seg-btn" data-days="240">1Y</button>
+                <button type="button" class="seg-btn" data-days="500">2Y</button>
+              </div>
+              <div class="seg-group" id="subchart-selector">
+                <button type="button" class="seg-btn active" data-sub="volume">成交量</button>
+                <button type="button" class="seg-btn" data-sub="rsi">RSI(14)</button>
+                <button type="button" class="seg-btn" data-sub="kd">KD(9)</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="ma-legend">
+            <label><input type="checkbox" id="chk-ma5" checked /> <span class="ma-dot" style="background:var(--series-ma5)"></span>MA5</label>
+            <label><input type="checkbox" id="chk-ma20" checked /> <span class="ma-dot" style="background:var(--series-ma20)"></span>MA20</label>
+            <label><input type="checkbox" id="chk-ma60" checked /> <span class="ma-dot" style="background:var(--series-ma60)"></span>MA60</label>
+            <label><input type="checkbox" id="chk-ma240" checked /> <span class="ma-dot" style="background:var(--series-ma240)"></span>MA240 (年線)</label>
+          </div>
+
+          <div class="canvas-wrap">
+            <canvas id="kline-canvas" class="bi-canvas"></canvas>
+            <div id="kline-tooltip" class="chart-tooltip"></div>
+          </div>
+        </section>
+
+        <div class="side-stack">
+          <section class="card" aria-label="多週期區間報酬">
+            <div class="card-header" style="margin-bottom:12px;">
+              <div>
+                <h2 class="card-title">多週期報酬結構</h2>
+                <p class="card-subtitle">500 交易日還原價區間績效</p>
+              </div>
+            </div>
+            <div class="returns-grid" id="returns-grid"></div>
+          </section>
+
+          <section class="card" aria-label="定期定額歷史試算 BI">
+            <div class="card-header" style="margin-bottom:10px;">
+              <div>
+                <h2 class="card-title">定期定額 500 日歷史試算</h2>
+                <p class="card-subtitle">即時回測投入成本與資產成長曲線</p>
+              </div>
+            </div>
+            <div class="dca-controls">
+              <label class="field-label">
+                單期投入金額
+                <input type="number" id="dca-amount" class="field-input mono" value="10000" min="1000" step="1000" />
+              </label>
+              <label class="field-label">
+                扣款頻率
+                <select id="dca-freq" class="field-select">
+                  <option value="21" selected>每月一次（約 21 交易日）</option>
+                  <option value="5">每週一次（約 5 交易日）</option>
+                  <option value="63">每季一次（約 63 交易日）</option>
+                </select>
+              </label>
+            </div>
+            <div class="canvas-wrap">
+              <canvas id="dca-canvas" class="bi-canvas"></canvas>
+            </div>
+            <div class="dca-stats" id="dca-stats"></div>
+          </section>
+        </div>
+      </div>
+
+      <!-- 6-Role Independent Cross-Review Committee -->
+      <section aria-label="六大獨立角色交叉審查意見">
+        <div class="card-header" style="margin-bottom:12px;">
+          <div>
+            <h2 class="card-title">六大獨立角色交叉審查（6-Role Cross-Review Committee）</h2>
+            <p class="card-subtitle">以六個獨立分析立場進行交叉審查（總經 16% · 技術 18% · 基本面 18% · 籌碼 16% · 風險管理 16% · 交易策略 16%）</p>
+          </div>
+          <div class="cross-review-tally" id="cross-review-tally"></div>
+        </div>
+        <div class="roles-grid" id="roles-grid"></div>
+      </section>
+
+      <!-- Add Custom Role Opinion Form -->
+      <section class="card" style="margin-bottom:18px;" aria-label="新增或匯入專案其他角色意見">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">匯入專案其他角色意見（即時參與班長加權決策）</h2>
+            <p class="card-subtitle">可輸入產業研究員、法說會紀要員或外部顧問對當前標的的觀點，儲存後將持久化並立即更新班長綜合評分</p>
+          </div>
+        </div>
+        <form id="custom-opinion-form">
+          <div class="opinion-form-grid">
+            <label class="field-label">
+              角色名稱（如：產業供應鏈研究員）
+              <input type="text" id="op-role" class="field-input" placeholder="例：AI 供應鏈分析師" required />
+            </label>
+            <label class="field-label">
+              提出者／來源
+              <input type="text" id="op-author" class="field-input" placeholder="例：團隊成員 A" value="專案團隊角色" />
+            </label>
+            <label class="field-label">
+              立場標籤
+              <select id="op-stance" class="field-select">
+                <option value="積極偏多">積極偏多</option>
+                <option value="謹慎偏多" selected>謹慎偏多</option>
+                <option value="中性觀望">中性觀望</option>
+                <option value="偏空警戒">偏空警戒</option>
+                <option value="減碼避險">減碼避險</option>
+              </select>
+            </label>
+            <label class="field-label">
+              角色評分 (0–100)
+              <input type="number" id="op-score" class="field-input mono" min="0" max="100" value="65" required />
+            </label>
+          </div>
+          <label class="field-label" style="margin-bottom:12px;">
+            核心論點與依據（多點可用分號「；」或換行分隔）
+            <textarea id="op-summary" class="field-textarea" rows="2" placeholder="例：CoWoS 先進封裝產能明年持續吃緊；客戶 2nm 訂單能見度高於預期，惟須留意匯率波動。" required></textarea>
+          </label>
+          <div style="display:flex;justify-content:flex-end;gap:10px;">
+            <button type="submit" class="btn btn-primary" id="btn-submit-opinion">提交意見並重算班長決策</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Same-Sector Peers Table -->
+      <section class="card" aria-label="同產業板塊個股對比">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">同板塊同業即時對比</h2>
+            <p class="card-subtitle">點擊任一同業列立即切換檢視其 BI 數據與團隊決策</p>
+          </div>
+        </div>
+        <div class="table-scroll">
+          <table class="bi-table">
+            <thead>
+              <tr>
+                <th>代號</th>
+                <th>名稱</th>
+                <th class="num">收盤價</th>
+                <th class="num">漲跌幅</th>
+                <th class="num">量比</th>
+                <th class="num">RSI(14)</th>
+                <th class="num">年線乖離</th>
+              </tr>
+            </thead>
+            <tbody id="peers-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <!-- ==================== VIEW 2: MARKET CHIPS BI ==================== -->
+    <div class="view-panel" id="view-chips">
+      <div class="chips-kpi-row" id="chips-kpi-row"></div>
+
+      <div class="chips-charts-grid">
+        <section class="card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">加權指數 vs 三大法人現貨買賣超</h2>
+              <p class="card-subtitle">金線：TAIEX 收盤（右軸）｜柱狀：三大法人現貨合計（左軸，億元）</p>
+            </div>
+            <div class="seg-group" id="chips-days-selector">
+              <button type="button" class="seg-btn" data-cdays="30">30D</button>
+              <button type="button" class="seg-btn active" data-cdays="60">60D</button>
+              <button type="button" class="seg-btn" data-cdays="120">120D</button>
+            </div>
+          </div>
+          <canvas id="chips-flow-canvas" class="bi-canvas"></canvas>
+        </section>
+
+        <section class="card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">上市融資維持率 vs 外資台指期未平倉</h2>
+              <p class="card-subtitle">金線：融資維持率（左軸，含 160%/150% 警戒線）｜藍線：外資期貨淨口數（右軸）</p>
+            </div>
+          </div>
+          <canvas id="chips-margin-canvas" class="bi-canvas"></canvas>
+        </section>
+      </div>
+
+      <section class="card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">近期台股大盤籌碼明細</h2>
+            <p class="card-subtitle">最近 15 個交易日之三大法人現貨、外資台指期淨部位與融資維持率</p>
+          </div>
+        </div>
+        <div class="table-scroll">
+          <table class="bi-table">
+            <thead>
+              <tr>
+                <th>日期</th>
+                <th class="num">加權指數</th>
+                <th class="num">漲跌幅</th>
+                <th class="num">外資現貨(億)</th>
+                <th class="num">投信(億)</th>
+                <th class="num">自營商(億)</th>
+                <th class="num">法人合計(億)</th>
+                <th class="num">外資期貨淨口數</th>
+                <th class="num">融資餘額(億)</th>
+                <th class="num">維持率</th>
+              </tr>
+            </thead>
+            <tbody id="chips-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <!-- ==================== VIEW 3: MARKET HEATMAP & SCANNER ==================== -->
+    <div class="view-panel" id="view-market">
+      <section class="card" style="margin-bottom:18px;">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">全市場多空寬度總覽</h2>
+            <p class="card-subtitle" id="breadth-subtitle">盤後全市場上漲／平盤／下跌結構統計</p>
+          </div>
+          <div id="breadth-badges" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+        </div>
+        <div class="breadth-bar" id="breadth-bar"></div>
+      </section>
+
+      <section class="card" style="margin-bottom:18px;">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">台股成交金額前 36 大資金熱力圖</h2>
+            <p class="card-subtitle">點擊任一方塊立即進入該標的之團隊決策與 K 線 BI 分析</p>
+          </div>
+        </div>
+        <div class="heatmap-grid" id="heatmap-grid"></div>
+      </section>
+
+      <section class="card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">動態選股與強弱排行掃描器</h2>
+            <p class="card-subtitle">即時掃描全市場 2,380+ 檔台股、ETF 與美股焦點標的</p>
+          </div>
+          <div class="seg-group" id="screener-mode-group">
+            <button type="button" class="seg-btn active" data-mode="turnover">成交額排行</button>
+            <button type="button" class="seg-btn" data-mode="volRatio">爆量異動</button>
+            <button type="button" class="seg-btn" data-mode="gainers">強勢漲幅</button>
+            <button type="button" class="seg-btn" data-mode="losers">重挫跌幅</button>
+            <button type="button" class="seg-btn" data-mode="bullMA">均線多頭</button>
+            <button type="button" class="seg-btn" data-mode="semi">半導體</button>
+            <button type="button" class="seg-btn" data-mode="etf">台股 ETF</button>
+            <button type="button" class="seg-btn" data-mode="us">美股焦點</button>
+          </div>
+        </div>
+        <div class="table-scroll">
+          <table class="bi-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>代號</th>
+                <th>名稱</th>
+                <th>板塊／市場</th>
+                <th class="num">收盤價</th>
+                <th class="num">漲跌幅</th>
+                <th class="num">量比</th>
+                <th class="num">成交額(億)</th>
+                <th class="num">RSI(14)</th>
+              </tr>
+            </thead>
+            <tbody id="screener-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div>StockT 投資團隊多角色決策系統 · 線上即時數據 BI 儀表板</div>
+    <div>免責聲明：本 BI 系統呈現之歷史行情、技術指標與 AI 團隊模擬決策僅供研究參考，不構成任何證券買賣建議。</div>
+  </footer>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

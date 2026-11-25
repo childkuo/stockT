@@ -1,0 +1,13 @@
+{
+  "name": "stockt-investment-bi",
+  "version": "1.0.0",
+  "description": "StockT 投資團隊多角色決策中心與 FunSTX 即時數據 BI 儀表板",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
